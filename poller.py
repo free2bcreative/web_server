@@ -76,13 +76,18 @@ class Poller:
         # still need to figure out this whole thing.
         # Look at the Google group and on the 
         # slides called "event-driven-architecture"
-        while
-        try:
-            data = self.clients[fd].recv(self.size)
-        except socket.error, e:
-            err = e.args[0]
-            if err = errno.EAGAIN or err == errno.EWOULDBLOCK:
-                break
+        while(true):
+
+            try:
+                data = self.clients[fd].recv(self.size)
+            except socket.error, e:
+                err = e.args[0]
+                if err = errno.EAGAIN or err == errno.EWOULDBLOCK:
+                    break
+            request = self.cache[fd] + data
+            if request.find("\r\n\r\n"):
+                parser = HTMLParser(request, self.debug.isDebug())
+                
 
 
         print "Request: \n[",
