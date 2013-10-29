@@ -1,12 +1,22 @@
+from Debug import Debug
 
 class HTMLParser:
     """ HTML Parser """
-    def __init__(self,request):
+    def __init__(self,request,debug):
+        self.debug = Debug(debug)
         self.parse(request)
+
 
     def parse(self, request):
         """ Parse the message/request """
         httpRequest = request.split("\r\n")
+
+        self.debug.printMessage("Request: \n\"" + request + "\"")
+        self.debug.printMessage("After splitting: ")
+        self.debug.printMessage(httpRequest)
+
+        for currentLine in httpRequest:
+            pass
 
         #parsing Request line
         requestLine = httpRequest[0].split()
@@ -26,8 +36,8 @@ class HTMLParser:
         	currentLine += 1
         	currentString = httpRequest[currentLine]
 
+        #parsing entity body (if needed)
         currentLine += 1
-
         if len(httpRequest) - 1 == currentLine:
         	self.entityBody = httpRequest[currentLine]
         else:

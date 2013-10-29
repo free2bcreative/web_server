@@ -2,6 +2,7 @@ import select
 import socket
 import sys
 from HTMLParser import HTMLParser
+from Debug import Debug
 
 class Poller:
     """ Polling server """
@@ -10,17 +11,11 @@ class Poller:
         self.port = port
         self.open_socket()
         self.clients = {}
-        self.size = 1024
-        self.debug = debug
+        self.size = 10000
+        self.debug = Debug(debug)
 
-        self.DEBUG("Hi!  This is a debug message")
-        self.DEBUG("Hello, this is another message")
-
-    def DEBUG(self,message):
-        if self.debug:
-            print message
-        else:
-            print "DEBUG disabled"
+        self.debug.printMessage("Hi!  This is a debug message")
+        self.debug.printMessage("Hello, this is another message")
 
     def open_socket(self):
         """ Setup the socket for incoming clients """
@@ -56,7 +51,6 @@ class Poller:
                     self.handleServer()
                     continue
                 # handle client socket
-                print "Got to here"
                 result = self.handleClient(fd)
 
     def handleError(self,fd):
@@ -73,17 +67,31 @@ class Poller:
 
     def handleServer(self):
         (client,address) = self.server.accept()
+        client.setblocking(0)
+        self.cache[client.fileno()] = ""
         self.clients[client.fileno()] = client
         self.poller.register(client.fileno(),self.pollmask)
 
     def handleClient(self,fd):
-        data = self.clients[fd].recv(self.size)
+        # still need to figure out this whole thing.
+        # Look at the Google group and on the 
+        # slides called "event-driven-architecture"
+        while
+        try:
+            data = self.clients[fd].recv(self.size)
+        except socket.error, e:
+            err = e.args[0]
+            if err = errno.EAGAIN or err == errno.EWOULDBLOCK:
+                break
 
-        parser = HTMLParser(data)
-        parser.printAll()
+
+        print "Request: \n[",
+        print data,
+        print "]"
+        #parser = HTMLParser(data, self.debug.isDebug())
+        #parser.printAll()
 
         if data:
-            print "\"" + data + "\""
             html = "<html><body><h1>200 OK</h1></body></html>\r\n\r\n"
 
             headers = "HTTP/1.0 200 OK\r\n"
