@@ -1,6 +1,7 @@
 import select
 import socket
 import sys
+import errno
 from HTMLParser import HTMLParser
 from Debug import Debug
 
@@ -13,6 +14,7 @@ class Poller:
         self.clients = {}
         self.size = 10000
         self.debug = Debug(debug)
+        self.cache = {}
 
         self.debug.printMessage("Hi!  This is a debug message")
         self.debug.printMessage("Hello, this is another message")
@@ -76,23 +78,25 @@ class Poller:
         # still need to figure out this whole thing.
         # Look at the Google group and on the 
         # slides called "event-driven-architecture"
-        while(true):
+        parser = HTMLParser(self.debug.isDebug())
+
+        while(True):
 
             try:
                 data = self.clients[fd].recv(self.size)
             except socket.error, e:
                 err = e.args[0]
-                if err = errno.EAGAIN or err == errno.EWOULDBLOCK:
+                if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
                     break
             request = self.cache[fd] + data
             if request.find("\r\n\r\n"):
-                parser = HTMLParser(request, self.debug.isDebug())
-                
+                if parser.parse(request):
+                    self.debug.printMessage("Parsing Completed")
+                    self.debug.printMessage(parser.printAll())
+                else:
+                    self.debug.printMessage("Parsing Failed")
+                    break
 
-
-        print "Request: \n[",
-        print data,
-        print "]"
         #parser = HTMLParser(data, self.debug.isDebug())
         #parser.printAll()
 
@@ -103,7 +107,7 @@ class Poller:
             headers += "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n"
             headers += "Content-Type: text/html\r\n"
             headers += "Content-Length: %d\r\n" % html.__len__()
-            headers += "\n"
+            headers += "\r\n"
             response = headers + html
             self.clients[fd].send(response)
         else:
