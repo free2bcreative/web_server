@@ -7,7 +7,7 @@ class WebServerConfig:
         self.configFilePath = configFilePath
         self.hosts = {}
         self.media = {}
-        self.idleTime = 0
+        self.timeOutTime = 0
         self.parse()
 
 
@@ -42,18 +42,23 @@ class WebServerConfig:
         	elif words[0] == "media":
         		self.media[words[1]] = words[2]
         	elif words[0] == "parameter":
-        		self.idleTime = int(words[2])
+        		self.timeOutTime = int(words[2])
 
-	def getPath(self,host):
-		""" Looks into dictionary and finds correct path """
-		if self.hosts.has_key(host):
-			return self.hosts[host]
-		else:
-			return self.hosts["default"]
+    def getPath(self,host):
+        """ Looks into dictionary and finds correct path """
+        if self.hosts.has_key(host):
+        	return self.hosts[host]
+        else:
+            return self.hosts["default"]
 
-	def getMediaType(ext):
-		""" Looks into dictionary and finds correct media type """
-		if self.media.has_key(ext):
-			return self.media[ext]
-		else:
-			return "text/plain"
+
+    def getMediaType(self,ext):
+        """ Looks into dictionary and finds correct media type """
+        if self.media.has_key(ext):
+            return self.media[ext]
+        else:
+            return "text/plain"
+
+    def getTimeOutTime(self):
+        """ Returns timeout time based on web.conf file """
+        return self.timeOutTime

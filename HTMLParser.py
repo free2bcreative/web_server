@@ -49,6 +49,17 @@ class HTMLParser:
 
         return True
 
+    def getMethod(self):
+        return self.method
+    def getUrl(self):
+        return self.url
+    def getHost():
+        if self.headerDictionary.has_key("Host:"):
+            return self.headerDictionary["Host:"].split(":")[0]
+        else:
+            self.debug.printMessage("[Host:] was not found in GET request")
+            return ""
+
     def printAll(self):
     	self.printItem("Method", self.method)
     	self.printItem("URL", self.url)

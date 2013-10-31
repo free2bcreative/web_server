@@ -4,6 +4,8 @@ import sys
 import errno
 from HTMLParser import HTMLParser
 from Debug import Debug
+from WebServerConfig import WebServerConfig
+
 
 class Poller:
     """ Polling server """
@@ -15,6 +17,8 @@ class Poller:
         self.size = 10000
         self.debug = Debug(debug)
         self.cache = {}
+        self.webServerConfig = WebServerConfig("web.conf", debug)
+        self.timeOutTime = self.webServerConfig.getTimeOutTime()
 
         self.debug.printMessage("Hi!  This is a debug message")
         self.debug.printMessage("Hello, this is another message")
@@ -40,7 +44,7 @@ class Poller:
         while True:
             # poll sockets
             try:
-                fds = self.poller.poll(timeout=1)
+                fds = self.poller.poll(timeout=self.timeOutTime)
             except:
                 return
             for (fd,event) in fds:
@@ -79,7 +83,8 @@ class Poller:
         # Look at the Google group and on the 
         # slides called "event-driven-architecture"
         parser = HTMLParser(self.debug.isDebug())
-
+        fileServer = FileServer(self.webServerConfig, self.debug.isDebug)
+        
         while(True):
 
             try:
@@ -93,6 +98,7 @@ class Poller:
                 if parser.parse(request):
                     self.debug.printMessage("Parsing Completed")
                     self.debug.printMessage(parser.printAll())
+
                 else:
                     self.debug.printMessage("Parsing Failed")
                     break

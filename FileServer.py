@@ -1,12 +1,14 @@
 from Debug import Debug
+from ErrorResponseCodes import ErrorResponseCodes
 
 class FileServer:
     """ FileServer """
-    def __init__(self,parser, webServerConfig,debug):
+    def __init__(self, webServerConfig,debug):
         self.debug = Debug(debug)
-        self.parser = parser
         self.webServerConfig = webServerConfig
+        self.errorCodes = ErrorResponseCodes()
 
-
-    def parse(self, request):
-        """ Parse the message/request """
+    def getResponse(self, htmlParser):
+    	# check if valid GET request
+    	if not htmlParser.getMethod() == "GET":
+    		return self.errorCodes.get400()
