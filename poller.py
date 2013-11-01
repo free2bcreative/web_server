@@ -5,6 +5,8 @@ import errno
 from HTMLParser import HTMLParser
 from Debug import Debug
 from WebServerConfig import WebServerConfig
+from ErrorResponseCodes import ErrorResponseCodes
+from FileServer import FileServer
 
 
 class Poller:
@@ -84,28 +86,45 @@ class Poller:
         # slides called "event-driven-architecture"
         parser = HTMLParser(self.debug.isDebug())
         fileServer = FileServer(self.webServerConfig, self.debug.isDebug)
-        
-        while(True):
 
+        while(True):
+            request = self.cache[fd]
             try:
                 data = self.clients[fd].recv(self.size)
+                if data:
+                    request += data
+                else:
+                    self.poller.unregister(fd)
+                    self.clients[fd].close()
+                    del self.clients[fd]
+                    break
             except socket.error, e:
                 err = e.args[0]
                 if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
                     break
-            request = self.cache[fd] + data
+
             if request.find("\r\n\r\n"):
+                response = ""
                 if parser.parse(request):
                     self.debug.printMessage("Parsing Completed")
                     self.debug.printMessage(parser.printAll())
-
+                    response = fileServer.getResponse(parser)
                 else:
                     self.debug.printMessage("Parsing Failed")
-                    break
+                    errorCodes = ErrorResponseCodes()
+                    response = errorCodes.get400()
+                
+                # may need to put a try except to send again if error
+                self.debug.printMessage("Response: ")
+                self.debug.printMessage(response)
+                self.clients[fd].send(response)
+                break
+            else:
+                self.cache[fd] = request
 
         #parser = HTMLParser(data, self.debug.isDebug())
         #parser.printAll()
-
+        """
         if data:
             html = "<html><body><h1>200 OK</h1></body></html>\r\n\r\n"
 
@@ -120,3 +139,4 @@ class Poller:
             self.poller.unregister(fd)
             self.clients[fd].close()
             del self.clients[fd]
+            """

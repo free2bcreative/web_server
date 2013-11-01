@@ -23,7 +23,7 @@ class HTMLParser:
         #parsing Request line
         requestLine = httpRequest[0].split()
         self.method = requestLine[0]
-        self.url = requestLine[1]
+        self.uri = requestLine[1]
         self.version = requestLine[2]
 
         #parsing Header lines
@@ -51,9 +51,9 @@ class HTMLParser:
 
     def getMethod(self):
         return self.method
-    def getUrl(self):
-        return self.url
-    def getHost():
+    def getUri(self):
+        return self.uri
+    def getHost(self):
         if self.headerDictionary.has_key("Host:"):
             return self.headerDictionary["Host:"].split(":")[0]
         else:
@@ -62,15 +62,12 @@ class HTMLParser:
 
     def printAll(self):
     	self.printItem("Method", self.method)
-    	self.printItem("URL", self.url)
+    	self.printItem("URI", self.uri)
     	self.printItem("Version", self.version)
 
     	for key, value in self.headerDictionary.iteritems():
     		self.printItem("Header Field Name", key)
     		self.printItem("\tHeader Value", value)
-        """
-    	if self.entityBody:
-    		self.printItem("Entity Body", self.entityBody)
-            """
+        return ""
     def printItem(self, title, message):
     	print title + ": " + "\"" + message + "\""
