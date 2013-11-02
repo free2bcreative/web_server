@@ -12,12 +12,12 @@ from FileServer import FileServer
 class Poller:
     """ Polling server """
     def __init__(self,port, debug):
+        self.debug = Debug(debug)
         self.host = ""
         self.port = port
         self.open_socket()
         self.clients = {}
         self.size = 10000
-        self.debug = Debug(debug)
         self.cache = {}
         self.webServerConfig = WebServerConfig("web.conf", debug)
         self.timeOutTime = self.webServerConfig.getTimeOutTime()

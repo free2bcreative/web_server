@@ -1,3 +1,4 @@
+import time
 from Debug import Debug
 from ErrorResponseCodes import ErrorResponseCodes
 
@@ -21,7 +22,9 @@ class FileServer:
 		self.debug.printMessage("Translating request to URL...")
 		host = htmlParser.getHost()
 		uri = htmlParser.getUri()
-		filePath = host + uri
+		filePath = self.webServerConfig.getPath(host) + uri
+		if filePath[-1] == '/':
+			filePath += "index.html"
 		self.debug.printMessage("FilePath: " + filePath)
 
 		# check if good filePath or no permissions given
@@ -52,7 +55,7 @@ class FileServer:
 		headers += "Content-Type: text/html\r\n"
 		headers += "Content-Length: %d\r\n" % html.__len__()
 		headers += "\r\n"
-		response = headers + html
+		response = statusLine + headers + html
 
 		self.debug.printMessage("Response: " + response)
 		return response
