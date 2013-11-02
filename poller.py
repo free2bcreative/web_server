@@ -25,9 +25,6 @@ class Poller:
         self.webServerConfig = WebServerConfig("web.conf", debug)
         self.timeOutTime = self.webServerConfig.getTimeOutTime()
 
-        self.debug.printMessage("Hi!  This is a debug message")
-        self.debug.printMessage("Hello, this is another message")
-
     def open_socket(self):
         """ Setup the socket for incoming clients """
         try:
@@ -71,9 +68,8 @@ class Poller:
                     continue
 
                 # mark and sweep code
-                self.debug.printMessage("\n\nAdding time for fd to last_used dictionary: %d" % fd)
                 self.last_used[fd] = self.now
-                self.printDictionary(self.last_used)
+
 
 
                 # handle client socket
@@ -86,12 +82,6 @@ class Poller:
                         self.debug.printMessage("Found fileDescriptor (%d) in self.clients. Checking..." % fileDescriptor)
                         if self.now - self.last_used[fileDescriptor] > self.sweepTime:
                             self.debug.printMessage("fileDescriptor was open for too long.  Closing socket...")
-
-                            self.debug.printMessage("Clients Dictionary:")
-                            self.printDictionary(self.clients)
-
-                            self.debug.printMessage("last_used Dictionary:")
-                            self.printDictionary(self.last_used)
 
                             self.poller.unregister(fileDescriptor)
                             self.clients[fileDescriptor].close()
@@ -111,8 +101,6 @@ class Poller:
             self.clients[fd].close()
             del self.clients[fd]
             del self.last_used[fd]
-            self.debug.printMessage("Deleted fd (%d) in clients (handleError)" % fd)
-            self.printDictionary(self.clients)
 
     def handleServer(self):
         (client,address) = self.server.accept()
@@ -121,25 +109,12 @@ class Poller:
         self.clients[client.fileno()] = client
         self.poller.register(client.fileno(),self.pollmask)
 
-        self.debug.printMessage("Added client to dictionary: ")
-        self.printDictionary(self.clients)
-
-    def printDictionary(self, dictionary):
-        print "--------------------"
-        print "Dictionary contents"
-        for key,value in dictionary.iteritems():
-            print "Key: ",
-            print key,
-            print "\tValue: ",
-            print value
-        print "--------------------"
-
     def handleClient(self,fd):
         # still need to figure out this whole thing.
         # Look at the Google group and on the 
         # slides called "event-driven-architecture"
         parser = HTMLParser(self.debug.isDebug())
-        fileServer = FileServer(self.webServerConfig, self.debug.isDebug)
+        fileServer = FileServer(self.webServerConfig, self.debug.isDebug())
 
         while(True):
             request = self.cache[fd]
@@ -152,8 +127,6 @@ class Poller:
                     self.clients[fd].close()
                     del self.clients[fd]
                     del self.last_used[fd]
-                    self.debug.printMessage("Deleted fd (%d) in clients (handleClient)" % fd)
-                    self.printDictionary(self.clients)
                     break
             except socket.error, e:
                 err = e.args[0]
@@ -164,7 +137,6 @@ class Poller:
                 response = ""
                 if parser.parse(request):
                     self.debug.printMessage("Parsing Completed")
-                    self.debug.printMessage(parser.printAll())
                     response = fileServer.getResponse(parser)
 
                 else:
@@ -172,7 +144,7 @@ class Poller:
                     errorCodes = ErrorResponseCodes()
                     response = errorCodes.get400()
                 
-                # may need to put a try except to send again if error
+                # Sending response
                 while True:
                     try:
                         sentBytes = self.clients[fd].send(response)
@@ -184,44 +156,12 @@ class Poller:
                 filePath = fileServer.getFilePath()
                 if not filePath == "":
                     self.sendFile(self.clients[fd], filePath)
-                """
-                if not filePath == "":
-                    file = open(filePath, "rb")
-                    while True:
-                        chunk = file.read(65536)
-                        if not chunk:
-                            break # EOF
-                        try:
-                            sentBytes = self.clients[fd].send(chunk)
-                            self.debug.printMessage("Number of Bytes sent: %d" % sentBytes)
-                        except socket.error, e:
-                            err = e.args[0]
-                            if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
-                                sentBytes = self.clients[fd].send(chunk)
-                                self.debug.printMessage("[RESEND] Number of Bytes sent: %d" % sentBytes)
-                                """
+
                 break
             else:
                 self.cache[fd] = request
 
-        #parser = HTMLParser(data, self.debug.isDebug())
-        #parser.printAll()
-        """
-        if data:
-            html = "<html><body><h1>200 OK</h1></body></html>\r\n\r\n"
 
-            headers = "HTTP/1.0 200 OK\r\n"
-            headers += "Date: Fri, 31 Dec 1999 23:59:59 GMT\r\n"
-            headers += "Content-Type: text/html\r\n"
-            headers += "Content-Length: %d\r\n" % html.__len__()
-            headers += "\r\n"
-            response = headers + html
-            self.clients[fd].send(response)
-        else:
-            self.poller.unregister(fd)
-            self.clients[fd].close()
-            del self.clients[fd]
-            """
     def sendFile(self, sock, filePath):
         file = open(filePath, "rb")
         

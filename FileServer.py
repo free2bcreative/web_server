@@ -8,6 +8,7 @@ class FileServer:
 	""" FileServer """
 	def __init__(self, webServerConfig,debug):
 		self.debug = Debug(debug)
+		self.unimplementedRequestMethods = ['HEAD', 'POST', 'PUT', 'DELETE', 'LINK', 'UNLINK']
 		self.webServerConfig = webServerConfig
 		self.errorCodes = ErrorResponseCodes()
 		self.filePath = ""
@@ -18,6 +19,8 @@ class FileServer:
 		# check if valid GET request
 		self.debug.printMessage("Checking if valid GET request...")
 		if not htmlParser.getMethod() == "GET":
+			if htmlParser.getMethod() in self.unimplementedRequestMethods:
+				return self.errorCodes.get501()
 			return self.errorCodes.get400()
 
 		# translate URI to filename
@@ -33,7 +36,7 @@ class FileServer:
 		self.debug.printMessage("Checking if good filePath or no permissions given")
 		try:
 			f = open(filePath)
-			print "Opened just fine"
+			self.debug.printMessage("Opened file just fine")
 			self.filePath = filePath
 		except IOError as (errno, strerror):
 			if errno == 13:
@@ -56,7 +59,9 @@ class FileServer:
 
 		t = time.time()
 		current_time = self.errorCodes.get_time(t)
-		headers = current_time + "\r\n"
+		headers = "Date: %s\r\n" % current_time
+
+		headers += "Server: freeServer/1.0 totallyAwesome\r\n"
 
 		fileExt = filePath.split(".")[-1]
 		contentType = self.webServerConfig.getMediaType(fileExt)

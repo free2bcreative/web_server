@@ -51,7 +51,8 @@ class ErrorResponseCodes():
 	def getHeaders(self, contentLength):
 		t = time.time()
 		current_time = self.get_time(t)
-		headers = current_time + "\r\n"
+		headers = "Date: %s\r\n" % current_time
+		headers += "Server: freeServer/1.0 totallyAwesome\r\n"
 		headers += "Content-Type: text/html\r\n"
 		headers += "Content-Length: %d\r\n" % contentLength
 		headers += "\r\n"

@@ -38,15 +38,6 @@ class HTMLParser:
         	currentLine += 1
         	currentString = httpRequest[currentLine]
 
-        """
-        #parsing entity body (if needed)
-        currentLine += 1
-        if len(httpRequest) - 1 == currentLine:
-        	self.entityBody = httpRequest[currentLine]
-        else:
-        	self.entityBody = None
-            """
-
         return True
 
     def getMethod(self):
