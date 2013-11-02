@@ -109,15 +109,40 @@ class Poller:
                     self.debug.printMessage("Parsing Completed")
                     self.debug.printMessage(parser.printAll())
                     response = fileServer.getResponse(parser)
+
                 else:
                     self.debug.printMessage("Parsing Failed")
                     errorCodes = ErrorResponseCodes()
                     response = errorCodes.get400()
                 
                 # may need to put a try except to send again if error
-                self.debug.printMessage("Response: ")
-                self.debug.printMessage(response)
-                self.clients[fd].send(response)
+                while True:
+                    try:
+                        sentBytes = self.clients[fd].send(response)
+                        break
+                    except socket.error, e:
+                        err = e.args[0]
+                        if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                            continue
+                filePath = fileServer.getFilePath()
+                if not filePath == "":
+                    self.sendFile(self.clients[fd], filePath)
+                """
+                if not filePath == "":
+                    file = open(filePath, "rb")
+                    while True:
+                        chunk = file.read(65536)
+                        if not chunk:
+                            break # EOF
+                        try:
+                            sentBytes = self.clients[fd].send(chunk)
+                            self.debug.printMessage("Number of Bytes sent: %d" % sentBytes)
+                        except socket.error, e:
+                            err = e.args[0]
+                            if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                                sentBytes = self.clients[fd].send(chunk)
+                                self.debug.printMessage("[RESEND] Number of Bytes sent: %d" % sentBytes)
+                                """
                 break
             else:
                 self.cache[fd] = request
@@ -140,3 +165,28 @@ class Poller:
             self.clients[fd].close()
             del self.clients[fd]
             """
+    def sendFile(self, sock, filePath):
+        file = open(filePath, "rb")
+        
+        chunk = file.read(10000)
+        while chunk:
+            
+            totalsent = 0
+            while totalsent < len(chunk):
+                self.debug.printMessage("totalsent: %d\nchunkLength: %d" % (totalsent, len(chunk)))
+                try:
+                    sentBytes = sock.send(chunk[totalsent:])
+                    self.debug.printMessage("Number of Bytes sent: %d" % sentBytes)
+                except socket.error, e:
+                    err = e.args[0]
+                    if err == errno.EAGAIN or err == errno.EWOULDBLOCK:
+                        self.debug.printMessage("Encountered EAGAIN or EWOULDBLOCK. Trying again...")
+                        continue
+                totalsent += sentBytes
+                self.debug.printMessage("totalsent: %d" % totalsent)
+
+            chunk = file.read(10000)
+
+
+        self.debug.printMessage("Finished sending file.  Closing file...")
+        file.close()

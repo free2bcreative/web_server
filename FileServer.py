@@ -1,3 +1,5 @@
+import os
+from stat import *
 import time
 from Debug import Debug
 from ErrorResponseCodes import ErrorResponseCodes
@@ -45,17 +47,33 @@ class FileServer:
 				return self.errorCodes.get500()
 
 
+		self.filePath = filePath
+
 		self.debug.printMessage("Good message. Generating 200 OK response...")
-		html = "<html><body><h1>200 OK</h1></body></html>\r\n\r\n"
+		# html = "<html><body><h1>200 OK</h1></body></html>\r\n\r\n"
 
 		statusLine = "HTTP/1.0 200 OK\r\n"
+
 		t = time.time()
 		current_time = self.errorCodes.get_time(t)
 		headers = current_time + "\r\n"
-		headers += "Content-Type: text/html\r\n"
-		headers += "Content-Length: %d\r\n" % html.__len__()
+
+		fileExt = filePath.split(".")[-1]
+		contentType = self.webServerConfig.getMediaType(fileExt)
+		headers += "Content-Type: %s\r\n" % contentType
+
+		size = os.stat(filePath).st_size
+		headers += "Content-Length: %d\r\n" % size
+
+		mod_time = os.stat(filePath).st_mtime
+		gmtModTime = self.errorCodes.get_time(mod_time)
+		headers += "Last-Modified: %s\r\n" % gmtModTime
+
 		headers += "\r\n"
-		response = statusLine + headers + html
+		response = statusLine + headers
 
 		self.debug.printMessage("Response: " + response)
 		return response
+
+	def getFilePath(self):
+		return self.filePath
