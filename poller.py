@@ -2,6 +2,7 @@ import select
 import socket
 import sys
 import errno
+import time
 from HTMLParser import HTMLParser
 from Debug import Debug
 from WebServerConfig import WebServerConfig
@@ -17,6 +18,8 @@ class Poller:
         self.port = port
         self.open_socket()
         self.clients = {}
+        self.last_used = {} # dictionary containing times a fd (socket) was last used
+        self.sweepTime = 5.0 # how long before we sweep through sockets and close the ones that need closing
         self.size = 10000
         self.cache = {}
         self.webServerConfig = WebServerConfig("web.conf", debug)
@@ -43,12 +46,20 @@ class Poller:
         self.poller = select.epoll()
         self.pollmask = select.EPOLLIN | select.EPOLLHUP | select.EPOLLERR
         self.poller.register(self.server,self.pollmask)
+        
+        # mark and sweep code
+        self.lastChecked = time.time() # last time we swept through all of the sockets
+        
         while True:
             # poll sockets
             try:
                 fds = self.poller.poll(timeout=self.timeOutTime)
             except:
                 return
+
+            # mark and sweep code
+            self.now = time.time()
+
             for (fd,event) in fds:
                 # handle errors
                 if event & (select.POLLHUP | select.POLLERR):
@@ -58,8 +69,35 @@ class Poller:
                 if fd == self.server.fileno():
                     self.handleServer()
                     continue
+
+                # mark and sweep code
+                self.debug.printMessage("\n\nAdding time for fd to last_used dictionary: %d" % fd)
+                self.last_used[fd] = self.now
+                self.printDictionary(self.last_used)
+
+
                 # handle client socket
                 result = self.handleClient(fd)
+
+                # mark and sweep code
+                if self.now - self.lastChecked > self.sweepTime:
+                    self.debug.printMessage("Sweeping and deleting any clients not being used...")
+                    for fileDescriptor in self.last_used:
+                        self.debug.printMessage("Found fileDescriptor (%d) in self.clients. Checking..." % fileDescriptor)
+                        if self.now - self.last_used[fileDescriptor] > self.sweepTime:
+                            self.debug.printMessage("fileDescriptor was open for too long.  Closing socket...")
+
+                            self.debug.printMessage("Clients Dictionary:")
+                            self.printDictionary(self.clients)
+
+                            self.debug.printMessage("last_used Dictionary:")
+                            self.printDictionary(self.last_used)
+
+                            self.poller.unregister(fileDescriptor)
+                            self.clients[fileDescriptor].close()
+                            del self.clients[fileDescriptor]
+                            del self.last_used[fileDescriptor]
+                    self.lastChecked = self.now
 
     def handleError(self,fd):
         self.poller.unregister(fd)
@@ -72,6 +110,9 @@ class Poller:
             # close the socket
             self.clients[fd].close()
             del self.clients[fd]
+            del self.last_used[fd]
+            self.debug.printMessage("Deleted fd (%d) in clients (handleError)" % fd)
+            self.printDictionary(self.clients)
 
     def handleServer(self):
         (client,address) = self.server.accept()
@@ -79,6 +120,19 @@ class Poller:
         self.cache[client.fileno()] = ""
         self.clients[client.fileno()] = client
         self.poller.register(client.fileno(),self.pollmask)
+
+        self.debug.printMessage("Added client to dictionary: ")
+        self.printDictionary(self.clients)
+
+    def printDictionary(self, dictionary):
+        print "--------------------"
+        print "Dictionary contents"
+        for key,value in dictionary.iteritems():
+            print "Key: ",
+            print key,
+            print "\tValue: ",
+            print value
+        print "--------------------"
 
     def handleClient(self,fd):
         # still need to figure out this whole thing.
@@ -97,6 +151,9 @@ class Poller:
                     self.poller.unregister(fd)
                     self.clients[fd].close()
                     del self.clients[fd]
+                    del self.last_used[fd]
+                    self.debug.printMessage("Deleted fd (%d) in clients (handleClient)" % fd)
+                    self.printDictionary(self.clients)
                     break
             except socket.error, e:
                 err = e.args[0]
